@@ -1,31 +1,29 @@
-section .note.GNU-stack
+section .note.GNU-stack noexec nowrite
 section .text
     global ft_read
     extern __errno_location
-
-; ssize_t ft_read(int fd, void *buf, size_t count)
-; rdi = file descriptor, rsi = buffer, rdx = count
+    default rel
 
 ft_read:
-    push    rbp                     ; Setup stack frame
+    push    rbp
     mov     rbp, rsp
-
-    mov     rax, 0                  ; syscall number for read
-    syscall                         ; make syscall
-
-    ; Check for error
-    cmp     rax, 0                  ; check if return value is negative
-    jl      .error                  ; if negative, handle error
-    jmp     .return                 ; otherwise return normally
+    
+    mov     rax, 0          ; syscall number for read
+    syscall
+    
+    cmp     rax, 0          ; Test if error
+    jl      .error          ; Jump if negative (error)
+    jmp     .done
 
 .error:
-    neg     rax                     ; make error code positive
-    push    rax                     ; save error code
-    call    __errno_location        ; get errno location
-    pop     qword [rax]            ; store error code in errno
-    mov     rax, -1                 ; return -1 to indicate error
+    neg     rax             ; Make error code positive
+    push    rax            ; Save error code
+    lea     rdi, [rel __errno_location wrt ..got]
+    call    [rdi]
+    pop     qword [rax]    ; Set errno
+    mov     rax, -1        ; Return -1
 
-.return:
-    mov     rsp, rbp               ; restore stack
+.done:
+    mov     rsp, rbp
     pop     rbp
     ret

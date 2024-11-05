@@ -1,8 +1,9 @@
-section .note.GNU-stack
+section .note.GNU-stack noexec nowrite
 section .text
     global ft_list_push_front
     extern malloc
     extern __errno_location
+    default rel
 
 ; struct s_list {
 ;     void *data;    // +0
@@ -17,12 +18,10 @@ ft_list_push_front:
     
     test    rdi, rdi               ; Check if begin_list is NULL
     jz      .error
-
     mov     rbx, rdi               ; Save begin_list pointer
     mov     r12, rsi               ; Save data pointer
-
     mov     rdi, 16                ; Size of s_list structure
-    call    malloc
+    call    malloc wrt ..plt
     test    rax, rax               ; Check malloc return
     jz      .malloc_error
 
@@ -38,7 +37,7 @@ ft_list_push_front:
 
 .malloc_error:
     ; Handle malloc error
-    call    __errno_location
+    call    __errno_location wrt ..plt
     mov     dword [rax], 12        ; Set errno to ENOMEM
     mov     eax, -1                ; Return -1 for error
     jmp     .exit

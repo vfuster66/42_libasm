@@ -1,41 +1,42 @@
-section .note.GNU-stack
+section .note.GNU-stack noexec nowrite
 section .text
-    global  ft_strdup
-    extern  malloc
-    extern  ft_strlen
-    extern  ft_strcpy
-    extern  __errno_location    ; for errno handling
+    global ft_strdup
+    extern malloc
+    extern ft_strlen
+    extern ft_strcpy
 
 ft_strdup:
-    push    rbx                 ; preserve rbx as per calling convention
-    push    rdi                 ; save source string pointer
+    push    rbp             ; Setup stack frame
+    mov     rbp, rsp
+    push    rdi            ; Save source string pointer
     
-    call    ft_strlen          ; get length of source string
-    inc     rax                ; add 1 for null terminator
+    ; Get string length
+    call    ft_strlen
+    inc     rax            ; Add 1 for null terminator
     
-    mov     rdi, rax           ; set malloc argument
-    mov     rbx, rax           ; save size in rbx
+    ; Call malloc
+    mov     rdi, rax       ; Set size for malloc
+    call    malloc WRT ..plt
     
-    call    malloc            ; allocate memory
-    test    rax, rax          ; check if malloc failed
-    jz      .error            ; handle malloc failure
+    test    rax, rax       ; Check if malloc failed
+    jz      error
     
-    mov     rdi, rax          ; set destination for strcpy
-    pop     rsi               ; restore source string pointer
-    push    rax               ; save malloc'd pointer
+    ; Copy string
+    mov     rdi, rax       ; Set destination for strcpy
+    pop     rsi            ; Restore source string as second parameter
+    push    rax            ; Save malloc'd pointer
     
-    call    ft_strcpy        ; copy string
+    call    ft_strcpy
     
-    pop     rax              ; restore return value (malloc'd pointer)
-    pop     rbx              ; restore rbx
+    pop     rax            ; Restore return value (malloc'd pointer)
+    
+    mov     rsp, rbp
+    pop     rbp
     ret
 
-.error:
-    pop     rdi              ; clean up stack
-    pop     rbx              ; restore rbx
-    push    rax              ; save error code
-    call    __errno_location ; get errno location
-    mov     dword [rax], 12  ; set errno to ENOMEM
-    pop     rax              ; restore error code
-    xor     rax, rax         ; return NULL
+error:
+    pop     rdi            ; Clean up stack
+    mov     rax, 0         ; Return NULL
+    mov     rsp, rbp
+    pop     rbp
     ret

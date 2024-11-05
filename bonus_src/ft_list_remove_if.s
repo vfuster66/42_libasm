@@ -1,7 +1,8 @@
-section .note.GNU-stack
+section .note.GNU-stack noexec nowrite
 section .text
     global ft_list_remove_if
     extern free
+    default rel
 
 ; void ft_list_remove_if(t_list **begin_list, void *data_ref, 
 ;                        int (*cmp)(), void (*free_fct)(void*))
@@ -46,7 +47,9 @@ ft_list_remove_if:
     test    r15, r15              ; Check if free_fct exists
     jz      .skip_free_data
     push    rbx
+    push    rax                   ; Align stack for call
     call    r15                   ; Call free_fct on data
+    pop     rax
     pop     rbx
 
 .skip_free_data:
@@ -54,7 +57,7 @@ ft_list_remove_if:
     mov     rax, [rbx + 8]        ; Save next pointer
     mov     [r12], rax            ; Update list pointer
     push    rax
-    call    free                  ; Free current node
+    call    free wrt ..plt        ; Free current node with PLT relocation
     pop     rax
     jmp     .check_current
 

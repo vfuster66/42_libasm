@@ -23,10 +23,10 @@ BONUS_OBJS = $(BONUS_SRCS:.s=.o)
 NASM = nasm
 NASMFLAGS = -f elf64
 CC = gcc
-CFLAGS = -no-pie -L. -lasm -Wl,--no-as-needed
+CFLAGS = -fPIE -pie
 
 # Compilation de la bibliothèque
-all: bonus   # Compile tout (obligatoire + bonus)
+all: $(NAME)
 
 $(NAME): $(OBJS)
 	ar rcs $(NAME) $(OBJS)
@@ -38,12 +38,12 @@ bonus: $(NAME) $(BONUS_OBJS)
 
 # Règles pour les tests
 test_main: all
-	$(CC) $(CFLAGS) -o test_main main.c -L. -lasm
+	$(CC) $(CFLAGS) main.c -L. -lasm -o test_main
 
 bonus_main: bonus
-	$(CC) $(CFLAGS) -o bonus_main bonus_main.c -L. -lasm
+	$(CC) $(CFLAGS) bonus_main.c -L. -lasm -o bonus_main
 
-test: test_main bonus_main  # Compile tout pour les tests
+test: test_main bonus_main
 
 # Compilation des fichiers .s en objets
 %.o: %.s
@@ -58,5 +58,4 @@ fclean: clean
 
 re: fclean all
 
-# Indiquer que ces cibles ne sont pas des fichiers réels
 .PHONY: all bonus bonus_main test_main test clean fclean re
