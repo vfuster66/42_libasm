@@ -3,42 +3,50 @@ section .text
     extern ft_strlen
     global ft_atoi_base
 
+; Fonction : ft_atoi_base
+; Convertit une chaîne de caractères en un entier selon une base donnée.
+; Paramètres :
+;   - rdi : pointeur vers la chaîne de caractères
+;   - rsi : pointeur vers la chaîne représentant la base
+; Retour :
+;   - rax : l'entier converti, ou 0 en cas d'erreur de base
+
 ft_atoi_base:
-    push    rbp                 ; Set up stack frame
+    push    rbp                 ; Met en place le cadre de pile
     mov     rbp, rsp
-    push    rbx                 ; Preserve rbx
-    push    r12                 ; Preserve r12
-    push    r13                 ; Preserve r13
-    push    r14                 ; Preserve r14
-    push    r15                 ; Preserve r15
+    push    rbx                 ; Sauvegarde rbx
+    push    r12                 ; Sauvegarde r12
+    push    r13                 ; Sauvegarde r13
+    push    r14                 ; Sauvegarde r14
+    push    r15                 ; Sauvegarde r15
 
-    ; Save parameters
-    mov     r14, rdi           ; Save str
-    mov     r15, rsi           ; Save base
+    ; Sauvegarde des paramètres
+    mov     r14, rdi           ; Sauvegarde str (chaîne d'entrée)
+    mov     r15, rsi           ; Sauvegarde base (chaîne de base)
 
-    ; Check base validity
+    ; Vérifie la validité de la base
     mov     rdi, rsi
     call    check_base
-    test    rax, rax           ; Check if base is valid
-    jz      .return            ; If not valid, return 0
+    test    rax, rax           ; Vérifie si la base est valide
+    jz      .return            ; Si la base est invalide, retourne 0
 
-    ; Get base length
+    ; Récupère la longueur de la base
     mov     rdi, r15
     call    ft_strlen
-    mov     r13, rax           ; Store base length
+    mov     r13, rax           ; Stocke la longueur de la base
 
-    ; Initialize variables
-    xor     r12, r12          ; result = 0
-    mov     rbx, 1            ; sign = 1
+    ; Initialisation des variables
+    xor     r12, r12           ; result = 0
+    mov     rbx, 1             ; sign = 1 (par défaut, nombre positif)
 
-    ; Skip whitespace
+    ; Ignore les espaces blancs
 .skip_space:
     movzx   eax, byte [r14]
     cmp     al, ' '
     je      .next_space
-    cmp     al, 9             ; '\t'
+    cmp     al, 9              ; '\t'
     jl      .check_sign
-    cmp     al, 13            ; '\r'
+    cmp     al, 13             ; '\r'
     jle     .next_space
     jmp     .check_sign
 
@@ -46,86 +54,91 @@ ft_atoi_base:
     inc     r14
     jmp     .skip_space
 
+    ; Vérifie le signe du nombre
 .check_sign:
     movzx   eax, byte [r14]
     cmp     al, '+'
     je      .next_sign
     cmp     al, '-'
     jne     .convert_loop
-    neg     rbx               ; Negate sign
+    neg     rbx                ; Inverse le signe si '-'
 .next_sign:
     inc     r14
     jmp     .check_sign
 
+    ; Boucle de conversion des caractères en entier
 .convert_loop:
-    movzx   edi, byte [r14]   ; Get current char
-    test    dil, dil          ; Check for null terminator
+    movzx   edi, byte [r14]    ; Récupère le caractère actuel
+    test    dil, dil           ; Vérifie la fin de la chaîne
     jz      .finish
-    
-    mov     rsi, r15          ; base string
-    call    get_digit
+
+    mov     rsi, r15           ; base (chaîne de base)
+    call    get_digit          ; Convertit le caractère en chiffre de la base
     cmp     rax, -1
-    je      .finish
+    je      .finish            ; Si caractère non valide, termine la conversion
 
     ; result = result * base_len + digit
-    imul    r12, r13
-    add     r12, rax
-    
-    inc     r14
+    imul    r12, r13           ; Multiplie le résultat actuel par la longueur de la base
+    add     r12, rax           ; Ajoute la valeur numérique du caractère
+
+    inc     r14                ; Passe au caractère suivant
     jmp     .convert_loop
 
 .finish:
-    imul    r12, rbx          ; Apply sign
-    mov     rax, r12          ; Set return value
+    imul    r12, rbx           ; Applique le signe au résultat
+    mov     rax, r12           ; Place le résultat dans rax
 
 .return:
-    pop     r15               ; Restore preserved registers
+    ; Restaure les registres sauvegardés
+    pop     r15
     pop     r14
     pop     r13
     pop     r12
     pop     rbx
-    mov     rsp, rbp
+    mov     rsp, rbp           ; Restaure le pointeur de pile
     pop     rbp
-    ret
+    ret                        ; Retourne le résultat
 
-; Get digit value from character
+; Fonction auxiliaire : get_digit
+; Retourne la valeur numérique d'un caractère dans la base, ou -1 si le caractère est invalide.
 get_digit:
-    xor     rax, rax          ; index = 0
+    xor     rax, rax           ; Initialise l'index à 0
 .loop:
     movzx   edx, byte [rsi + rax]
-    test    dl, dl            ; Check for end of string
+    test    dl, dl             ; Vérifie la fin de la chaîne
     jz      .not_found
-    cmp     dl, dil           ; Compare with input char
+    cmp     dl, dil            ; Compare le caractère avec l'entrée
     je      .found
     inc     rax
     jmp     .loop
 .not_found:
-    mov     rax, -1
+    mov     rax, -1            ; Retourne -1 si non trouvé
 .found:
     ret
 
-; Check if base is valid
+; Fonction auxiliaire : check_base
+; Vérifie la validité de la base (caractères uniques et sans +, -, ou espaces)
 check_base:
-    xor     rcx, rcx          ; i = 0
+    xor     rcx, rcx           ; i = 0
 .outer_loop:
     movzx   eax, byte [rdi + rcx]
-    test    al, al            ; Check for end of string
+    test    al, al             ; Vérifie la fin de la chaîne
     jz      .valid
-    
-    ; Check for invalid characters
+
+    ; Vérifie les caractères invalides
     cmp     al, '+'
     je      .invalid
     cmp     al, '-'
     je      .invalid
     cmp     al, ' '
     je      .invalid
-    cmp     al, 9             ; '\t'
+    cmp     al, 9              ; '\t'
     jl      .check_next
-    cmp     al, 13            ; '\r'
+    cmp     al, 13             ; '\r'
     jle     .invalid
 
 .check_next:
-    ; Check for duplicates
+    ; Vérifie les caractères en double dans la base
     mov     rdx, rcx
     inc     rdx
 .inner_loop:
@@ -142,8 +155,8 @@ check_base:
     jmp     .outer_loop
 
 .valid:
-    mov     rax, 1
+    mov     rax, 1             ; Base valide
     ret
 .invalid:
-    xor     rax, rax
+    xor     rax, rax           ; Base invalide
     ret
