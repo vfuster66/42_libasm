@@ -1,4 +1,4 @@
-# LibASM
+# 42_libasm
 
 Ce projet consiste en une bibliothèque de fonctions basiques écrites en assembleur x86_64 (Intel syntax).
 
@@ -409,10 +409,10 @@ Cette fonction permet de parcourir et de modifier la liste en fonction d'une con
 Les étapes suivantes permettent de configurer et de compiler le projet `libasm` dans un conteneur Docker. Ces commandes créent un environnement Ubuntu isolé, installent les dépendances nécessaires, compilent le projet et exécutent les tests.
 
 1. **Créer et démarrer le conteneur Docker** :  
-   La commande ci-dessous crée et démarre un conteneur Ubuntu avec le dossier local `42_libasm` monté sur `/app` dans le conteneur :
-    ```bash
-    docker run -it --name libasm-container -v ~/42_libasm:/app ubuntu:latest
-    ```
+La commande ci-dessous crée et démarre un conteneur Ubuntu avec le dossier local `42_libasm` monté sur `/app` dans le conteneur :
+```bash
+docker run -it --name libasm-container -v ~/42_libasm:/app ubuntu:latest
+```
 
 2. **Mettre à jour le système et installer les dépendances** :
 Une fois dans le conteneur, exécutez les commandes suivantes pour mettre à jour les paquets et installer les outils de compilation :
