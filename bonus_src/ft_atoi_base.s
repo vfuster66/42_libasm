@@ -1,133 +1,149 @@
+section .note.GNU-stack
 section .text
-extern ft_strlen
-global ft_atoi_base
+    extern ft_strlen
+    global ft_atoi_base
 
 ft_atoi_base:
-    push    rdi                 ; sauvegarder rdi
-    push    rsi                 ; sauvegarder rsi
+    push    rbp                 ; Set up stack frame
+    mov     rbp, rsp
+    push    rbx                 ; Preserve rbx
+    push    r12                 ; Preserve r12
+    push    r13                 ; Preserve r13
+    push    r14                 ; Preserve r14
+    push    r15                 ; Preserve r15
 
-    mov     rdi, rsi            ; rdi = base
-    call    check_base          ; vérifier la validité de la base
-    pop     rsi                 ; restaurer rsi
-    pop     rdi                 ; restaurer rdi
+    ; Save parameters
+    mov     r14, rdi           ; Save str
+    mov     r15, rsi           ; Save base
 
-    mov     r11, 0              ; nbr = 0
-    mov     r12, 1              ; sign = 1
-    cmp     rax, 0              ; si ret == 0
-    je      end                 ; alors fin
+    ; Check base validity
+    mov     rdi, rsi
+    call    check_base
+    test    rax, rax           ; Check if base is valid
+    jz      .return            ; If not valid, return 0
 
-    push    rdi                 ; sauvegarder rdi
-    push    rsi                 ; sauvegarder rsi
-    mov     rdi, rsi            ; rdi = str
-    call    ft_strlen          ; appel à strlen
-    pop     rsi                 ; restaurer rsi
-    pop     rdi                 ; restaurer rdi
+    ; Get base length
+    mov     rdi, r15
+    call    ft_strlen
+    mov     r13, rax           ; Store base length
 
-    cmp     rax, 2              ; si ret < 2
-    jl      end                 ; alors fin
+    ; Initialize variables
+    xor     r12, r12          ; result = 0
+    mov     rbx, 1            ; sign = 1
 
-    mov     r10, rax            ; baselen = strlen(base)
-    dec     rdi                 ; str--
+    ; Skip whitespace
+.skip_space:
+    movzx   eax, byte [r14]
+    cmp     al, ' '
+    je      .next_space
+    cmp     al, 9             ; '\t'
+    jl      .check_sign
+    cmp     al, 13            ; '\r'
+    jle     .next_space
+    jmp     .check_sign
 
-skipspace:
-    inc     rdi                 ; str++
-    mov     dl, byte [rdi]      ; dl = str[0]
+.next_space:
+    inc     r14
+    jmp     .skip_space
+
+.check_sign:
+    movzx   eax, byte [r14]
+    cmp     al, '+'
+    je      .next_sign
+    cmp     al, '-'
+    jne     .convert_loop
+    neg     rbx               ; Negate sign
+.next_sign:
+    inc     r14
+    jmp     .check_sign
+
+.convert_loop:
+    movzx   edi, byte [r14]   ; Get current char
+    test    dil, dil          ; Check for null terminator
+    jz      .finish
     
-    ; Skip white space
-    cmp     dl, 9               ; if str[0] == '\t'
-    je      skipspace
-    cmp     dl, 10              ; if str[0] == '\n'
-    je      skipspace
-    cmp     dl, 11              ; if str[0] == '\v'
-    je      skipspace
-    cmp     dl, 12              ; if str[0] == '\f'
-    je      skipspace
-    cmp     dl, 13              ; if str[0] == '\r'
-    je      skipspace
-    cmp     dl, 32              ; if str[0] == ' '
-    je      skipspace
-    dec     rdi                 ; str--
+    mov     rsi, r15          ; base string
+    call    get_digit
+    cmp     rax, -1
+    je      .finish
 
-skipsign:
-    inc     rdi                 ; str++
-    mov     dl, byte [rdi]      ; dl = str[0]
-    cmp     dl, 43              ; if str[0] == '+'
-    je      skipsign
-    cmp     dl, 45              ; if str[0] == '-'
-    je      sign                ; alors change le signe et boucle
+    ; result = result * base_len + digit
+    imul    r12, r13
+    add     r12, rax
+    
+    inc     r14
+    jmp     .convert_loop
 
-loop:
-    mov     dl, byte [rdi]      ; dl = str[0]
-    push    rdi                 ; sauvegarder rdi
-    push    rsi                 ; sauvegarder rsi
-    mov     dil, dl             ; 1st = str[0]
-    call    in_str              ; in_str(str[0], base)
-    pop     rsi                 ; restaurer rsi
-    pop     rdi                 ; restaurer rdi
+.finish:
+    imul    r12, rbx          ; Apply sign
+    mov     rax, r12          ; Set return value
 
-    cmp     rax, 0              ; if (ret < 0)
-    jl      end                 ; alors fin
-
-    imul    r11, r10            ; nbr *= baselen
-    add     r11, rax            ; nbr += index
-    inc     rdi                 ; str++
-    jmp     loop                ; boucle
-
-sign:
-    imul    r12, -1             ; changer le signe
-    jmp     skipsign            ; retourner à skipsign
-
-end:
-    imul    r11, r12            ; nbr * sign
-    mov     rax, r11            ; retour (nbr)
+.return:
+    pop     r15               ; Restore preserved registers
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    mov     rsp, rbp
+    pop     rbp
     ret
 
-in_str:
-    mov     rax, -1             ; i = -1
-index:
-    inc     rax                  ; i++
-    mov     dl, byte [rsi + rax] ; dl = base[i]
-    cmp     dl, 0                ; if (base[i] == '\0')
-    je      error                ; alors retourner (-1)
-    cmp     dl, dil              ; if (base[i] == c)
-    je      stop                 ; alors retourner (i)
-    jmp     index                ; boucle
-stop:
-    ret
-error:
+; Get digit value from character
+get_digit:
+    xor     rax, rax          ; index = 0
+.loop:
+    movzx   edx, byte [rsi + rax]
+    test    dl, dl            ; Check for end of string
+    jz      .not_found
+    cmp     dl, dil           ; Compare with input char
+    je      .found
+    inc     rax
+    jmp     .loop
+.not_found:
     mov     rax, -1
+.found:
     ret
 
+; Check if base is valid
 check_base:
-    mov     rax, 0               ; ret = 0
-    mov     r11, 0                ; i = 0
-    mov     r12, 0                ; j = 0
-whilei:
-    mov     sil, byte [rdi + r11] ; sil = base[i]
-    cmp     sil, 0                ; if base[i] == '\0'
-    je      donei                 ; alors fin while
-    mov     r12, r11              ; j = i
-    inc     r12                    ; i + 1
-    cmp     sil, 43               ; if base[i] == '+'
-    je      done                  ; alors retourner
-    cmp     sil, 45               ; if base[i] == '-'
-    je      done                  ; alors retourner
-    cmp     sil, 33               ; if base[i] < 33
-    jl      done                  ; alors retourner
-    cmp     sil, 127              ; if base[i] > 127
-    jg      done                  ; alors retourner
-whilej:
-    mov     dl, byte [rdi + r12]  ; dl = base[j]
-    cmp     dl, 0                  ; if base[j] == '\0'
-    je      donej                 ; alors fin while
-    cmp     sil, dl                ; if base[i] == base[j]
-    je      done                   ; alors retourner
-    inc     r12                    ; j++
-    jmp     whilej                ; while loop
-donej:
-    inc     r11                    ; i++
-    jmp     whilei                ; while loop
-donei:
-    mov     rax, 1                ; valid, ret = 1
-done:
+    xor     rcx, rcx          ; i = 0
+.outer_loop:
+    movzx   eax, byte [rdi + rcx]
+    test    al, al            ; Check for end of string
+    jz      .valid
+    
+    ; Check for invalid characters
+    cmp     al, '+'
+    je      .invalid
+    cmp     al, '-'
+    je      .invalid
+    cmp     al, ' '
+    je      .invalid
+    cmp     al, 9             ; '\t'
+    jl      .check_next
+    cmp     al, 13            ; '\r'
+    jle     .invalid
+
+.check_next:
+    ; Check for duplicates
+    mov     rdx, rcx
+    inc     rdx
+.inner_loop:
+    movzx   r8d, byte [rdi + rdx]
+    test    r8b, r8b
+    jz      .next_outer
+    cmp     al, r8b
+    je      .invalid
+    inc     rdx
+    jmp     .inner_loop
+
+.next_outer:
+    inc     rcx
+    jmp     .outer_loop
+
+.valid:
+    mov     rax, 1
+    ret
+.invalid:
+    xor     rax, rax
     ret

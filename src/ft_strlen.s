@@ -1,14 +1,13 @@
+section .note.GNU-stack
 section .text
-	global ft_strlen			        ; must be declared for linker (gcc)
+    global ft_strlen                    ; export function name
 
-ft_strlen:							    ; entry point of function, it receives rdi as argument (address of the string's first character)
-	xor     rax, rax					; set rax to zero with xor bit manipulation (fastest way to put register to zero)
-
-while:
-	cmp	    BYTE [rdi + rax], 0	 		; comparing address + len with NULL value
-	je	    return				 		; if the previous line triggered the zero flag (meaning the two values were equal), it returns.
-	inc	    rax                         ; increment rax
-	jmp	    while                       ; go back to beginning of while loop
-
-return:
-	ret                                 ; return rax
+ft_strlen:
+    xor     rax, rax                   ; initialize counter to 0
+.loop:                                 ; local label with dot prefix is cleaner
+    cmp     BYTE [rdi + rax], 0        ; check for null terminator
+    je      .return                    ; jump if null found
+    inc     rax                        ; increment counter
+    jmp     .loop                      ; continue loop
+.return:
+    ret                                ; return string length in rax

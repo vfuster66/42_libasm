@@ -1,48 +1,84 @@
+section .note.GNU-stack
 section .text
-global ft_list_sort
+    global ft_list_sort
+
+; void ft_list_sort(t_list **begin_list, int (*cmp)())
+; rdi = begin_list, rsi = cmp function pointer
 
 ft_list_sort:
-    ; Vérifier si la liste est vide ou a un seul élément
-    mov rdi, [rsi]              ; rdi = début de la liste
-    test rdi, rdi               ; vérifier si rdi est nul
-    jz .exit                    ; sortir si la liste est vide
-    mov rbx, [rdi + 8]          ; rbx = nœud suivant
+    push    rbp                     ; Setup stack frame
+    mov     rbp, rsp
+    push    rbx                     ; Save preserved registers
+    push    r12
+    push    r13
+    push    r14
+    push    r15
 
-    ; Boucle principale pour le tri
-.outer_loop:
-    xor rcx, rcx                ; rcx = swapped (indique si un échange a eu lieu)
-    mov rdi, [rsi]              ; rdi = début de la liste
+    ; Save parameters and validate input
+    test    rdi, rdi               ; Check if begin_list is NULL
+    jz      .exit
+    test    rsi, rsi               ; Check if cmp function is NULL
+    jz      .exit
 
-.inner_loop:
-    ; Vérifier si rdi et rbx ne sont pas nuls
-    test rdi, rdi               ; vérifier si rdi est nul
-    jz .no_swap                 ; sauter si rdi est nul
+    mov     r12, rdi               ; r12 = begin_list ptr
+    mov     r13, rsi               ; r13 = cmp function
 
-    ; Comparer les valeurs des nœuds
-    mov rax, [rdi]              ; rax = données du nœud courant
-    mov rdx, [rbx]              ; rdx = données du nœud suivant
-    call rdi                    ; appeler la fonction de comparaison
+.bubble_sort:
+    xor     r14, r14              ; r14 = swapped flag
+    mov     rbx, [r12]            ; rbx = current node
+    mov     r15, [r12]            ; r15 = list head (for comparison)
 
-    ; Si le résultat de cmp > 0, échanger les nœuds
-    cmp rax, 0                  ; comparer le résultat
-    jle .no_swap                ; sauter si pas besoin d'échanger
+.compare_loop:
+    test    rbx, rbx              ; Check if current node is NULL
+    jz      .check_swapped
+    mov     rsi, [rbx + 8]        ; rsi = next node
+    test    rsi, rsi              ; Check if next node exists
+    jz      .check_swapped
 
-    ; Échanger les nœuds
-    mov rax, [rdi + 8]          ; sauvegarder le pointeur vers le suivant
-    mov [rdi + 8], rbx          ; mettre le suivant du nœud courant au nœud suivant
-    mov [rbx + 8], rax          ; lier le nœud courant au nœud suivant de rb
-    mov rdi, [rsi]              ; restaurer le début pour la prochaine itération
-    mov rcx, 1                  ; marquer qu'un échange a eu lieu
+    ; Compare nodes
+    push    rdi                   ; Save registers that might be modified by cmp
+    push    rsi
+    mov     rdi, [rbx]           ; First argument: current node data
+    mov     rsi, [rsi]           ; Second argument: next node data
+    call    r13                   ; Call comparison function
+    pop     rsi
+    pop     rdi
+
+    ; Check if swap needed
+    test    eax, eax
+    jle     .no_swap
+
+    ; Swap nodes
+    mov     r14, 1               ; Set swapped flag
+    mov     rdi, [rbx + 8]       ; rdi = next node
+    mov     rdx, [rdi + 8]       ; rdx = next->next
+    mov     [rbx + 8], rdx       ; current->next = next->next
+    mov     [rdi + 8], rbx       ; next->next = current
+
+    ; Update list head if needed
+    cmp     rbx, r15             ; Check if we're swapping the head
+    jne     .continue_swap
+    mov     [r12], rdi           ; Update head pointer
+    mov     r15, rdi             ; Update head reference
+
+.continue_swap:
+    mov     rbx, rdi             ; Move to next node
+    jmp     .compare_loop
 
 .no_swap:
-    mov rdi, [rbx + 8]          ; passer au nœud suivant
-    mov rbx, [rbx + 8]          ; avancer dans la liste
-    test rbx, rbx               ; vérifier si rbx est nul
-    jnz .inner_loop             ; continuer tant qu'il y a des nœuds
+    mov     rbx, [rbx + 8]       ; Move to next node
+    jmp     .compare_loop
 
-    ; Si au moins un échange a eu lieu, continuer le tri
-    cmp rcx, 0                  ; vérifier si un échange a eu lieu
-    jnz .outer_loop             ; recommencer si un échange a été fait
+.check_swapped:
+    test    r14, r14             ; Check if any swaps occurred
+    jnz     .bubble_sort         ; If yes, do another pass
 
 .exit:
+    pop     r15                  ; Restore preserved registers
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    mov     rsp, rbp
+    pop     rbp
     ret

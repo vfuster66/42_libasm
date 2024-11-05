@@ -1,23 +1,41 @@
+section .note.GNU-stack
 section .text
-	global	ft_strdup
-	extern	malloc			; including malloc, strlen and strcpy
-	extern	ft_strlen
-	extern	ft_strcpy
+    global  ft_strdup
+    extern  malloc
+    extern  ft_strlen
+    extern  ft_strcpy
+    extern  __errno_location    ; for errno handling
 
-ft_strdup:					; strdup receives src string's address as rdi
+ft_strdup:
+    push    rbx                 ; preserve rbx as per calling convention
+    push    rdi                 ; save source string pointer
+    
+    call    ft_strlen          ; get length of source string
+    inc     rax                ; add 1 for null terminator
+    
+    mov     rdi, rax           ; set malloc argument
+    mov     rbx, rax           ; save size in rbx
+    
+    call    malloc            ; allocate memory
+    test    rax, rax          ; check if malloc failed
+    jz      .error            ; handle malloc failure
+    
+    mov     rdi, rax          ; set destination for strcpy
+    pop     rsi               ; restore source string pointer
+    push    rax               ; save malloc'd pointer
+    
+    call    ft_strcpy        ; copy string
+    
+    pop     rax              ; restore return value (malloc'd pointer)
+    pop     rbx              ; restore rbx
+    ret
 
-	push	rdi				; saving the value of rdi to use later in strcpy
-	call	ft_strlen		; strlen takes rdi and returns the length in rax
-	inc		rax				; increase rax by one to account for the '/0'
-	mov		rdi, rax		; move rax to rdi
-	call	malloc			; malloc takes rdi as argument for the size to allocate
-	cmp		rax, 0			; compare the rax (returned value of malloc) with NULL
-	je		fail			; if equal, malloc returned NULL and there was a fail
-	mov		rdi, rax		; we move the allocated memory address to rdi (first arg)
-	pop		rsi				; we pop the saved src address from the pile into rsi (second arg)
-	call	ft_strcpy		; ft_strcpy takes rdi and rsi as arguments and copies rsi in rdi
-	ret						; returns rax (which still has the destination address)
-
-fail:
-	mov		rax, 0			; if fail, strdup returns NULL so we move 0 in rax
-	ret						; returns rax (0)
+.error:
+    pop     rdi              ; clean up stack
+    pop     rbx              ; restore rbx
+    push    rax              ; save error code
+    call    __errno_location ; get errno location
+    mov     dword [rax], 12  ; set errno to ENOMEM
+    pop     rax              ; restore error code
+    xor     rax, rax         ; return NULL
+    ret

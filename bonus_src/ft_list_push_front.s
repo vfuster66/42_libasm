@@ -1,21 +1,54 @@
+section .note.GNU-stack
 section .text
-extern malloc
-global ft_list_push_front
+    global ft_list_push_front
+    extern malloc
+    extern __errno_location
+
+; struct s_list {
+;     void *data;    // +0
+;     s_list *next;  // +8
+; }
 
 ft_list_push_front:
-    push    rdi                 ; sauvegarder rdi
-    push    rsi                 ; sauvegarder rsi
+    push    rbp                     ; Set up stack frame
+    mov     rbp, rsp
+    push    rbx                     ; Save preserved registers
+    push    r12
+    
+    test    rdi, rdi               ; Check if begin_list is NULL
+    jz      .error
 
-    mov     rsi, [rdi]          ; rsi = début de la liste
-    call    malloc              ; allouer de la mémoire pour le nouveau nœud
-    test    rax, rax            ; vérifier l'allocation
-    jz      .exit               ; sortir si échec
+    mov     rbx, rdi               ; Save begin_list pointer
+    mov     r12, rsi               ; Save data pointer
 
-    mov     [rax], rdx          ; stocker les données dans le nouveau nœud
-    mov     [rax + 8], rsi      ; lier le nouveau nœud au début de la liste
-    mov     [rdi], rax          ; mettre à jour le début de la liste
+    mov     rdi, 16                ; Size of s_list structure
+    call    malloc
+    test    rax, rax               ; Check malloc return
+    jz      .malloc_error
+
+    ; Initialize new node
+    mov     [rax], r12             ; node->data = data
+    mov     rcx, [rbx]             ; Get current first node
+    mov     [rax + 8], rcx         ; node->next = *begin_list
+    mov     [rbx], rax             ; *begin_list = node
+
+    ; Success path
+    xor     eax, eax               ; Return 0 for success
+    jmp     .exit
+
+.malloc_error:
+    ; Handle malloc error
+    call    __errno_location
+    mov     dword [rax], 12        ; Set errno to ENOMEM
+    mov     eax, -1                ; Return -1 for error
+    jmp     .exit
+
+.error:
+    mov     eax, -1                ; Return -1 for invalid input
 
 .exit:
-    pop     rsi                 ; restaurer rsi
-    pop     rdi                 ; restaurer rdi
+    pop     r12                    ; Restore preserved registers
+    pop     rbx
+    mov     rsp, rbp
+    pop     rbp
     ret
