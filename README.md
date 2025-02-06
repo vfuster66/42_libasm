@@ -411,7 +411,7 @@ Les étapes suivantes permettent de configurer et de compiler le projet `libasm`
 1. **Créer et démarrer le conteneur Docker** :  
 La commande ci-dessous crée et démarre un conteneur Ubuntu avec le dossier local `42_libasm` monté sur `/app` dans le conteneur :
 ```bash
-docker run -it --name libasm-container -v ~/42_libasm:/app ubuntu:latest
+docker run -it --rm --name libasm-container --platform linux/amd64 -v ~/42_libasm:/app ubuntu:latest
 ```
 
 2. **Mettre à jour le système et installer les dépendances** :

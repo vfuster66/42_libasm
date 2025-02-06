@@ -28,9 +28,18 @@ ft_strcmp:
     jmp     .compare_loop          ; Boucle pour continuer la comparaison
 
 .not_equal:
-    sub     eax, ebx               ; Calcule la différence entre les deux caractères courants
-    pop     rbx                    ; Restaure rbx
-    ret                            ; Retourne la différence (indique les chaînes sont différentes)
+   movzx   eax, byte [rdi]    ; Recharge le caractère de première chaîne
+   movzx   ebx, byte [rsi]    ; Recharge le caractère de seconde chaîne
+   sub     eax, ebx           ; Calcule la différence
+   test    eax, eax           ; Test si la différence est positive ou négative
+   jg      .positive
+   mov     eax, -1            ; Si négatif, retourne -1
+   jmp     .return
+.positive:
+   mov     eax, 1             ; Si positif, retourne 1
+.return:
+   pop     rbx
+   ret
 
 .equal:
     xor     eax, eax               ; Place 0 dans eax pour indiquer que les chaînes sont égales
